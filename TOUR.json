@@ -1,1 +1,20 @@
-{"tour": 1, "steps": [{"screenshot": "1-start.jpg", "wait_ms": 2000}, {"screenshot": "2-play.png", "keys": ["W"], "wait_ms": 2500, "call": {"module": "ServerScriptService.Server.Tour", "fn": "bank", "arg": 6, "on": "Server"}}, {"screenshot": "3-end.png", "wait_ms": 3000, "call": {"module": "ServerScriptService.Server.Tour", "fn": "tsunami", "arg": "now", "on": "Server"}}]}
+{
+  "tour": 1,
+  "steps": [
+    {
+      "screenshot": "1-start.jpg",
+      "wait_ms": 2000
+    },
+    {
+      "screenshot": "2-play.png",
+      "keys": ["W"],
+      "wait_ms": 2500,
+      "call": { "module": "ServerScriptService.Server.Tour", "fn": "bank", "arg": 6, "on": "Server" }
+    },
+    {
+      "screenshot": "3-end.png",
+      "wait_ms": 3000,
+      "call": { "module": "ServerScriptService.Server.Tour", "fn": "tsunami", "arg": "now", "on": "Server" }
+    }
+  ]
+}

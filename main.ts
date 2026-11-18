@@ -1,3 +1,4 @@
+// Revision: verified 1280x720 primary thumbnail integration and tour data (round 3)
 // Brainrot Escape Disaster: the roblox-brainrot-01 entry (Node 22, standard library only).
 //
 // The game is this directory's Rojo project (default.project.json maps src/server to
