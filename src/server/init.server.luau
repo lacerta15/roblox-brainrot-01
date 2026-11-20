@@ -89,7 +89,7 @@ local function makePart(parent: Instance, props: { [string]: any }): BasePart
 	end
 	p.Anchored = true
 	p.CanCollide = props.collide == true
-	p.CanTouch = false
+	p.CanTouch = (props.touch == true or props.collide == true)
 	p.CanQuery = props.collide == true
 	p.CastShadow = props.shadow ~= false
 	p.TopSurface = Enum.SurfaceType.Smooth
@@ -331,7 +331,7 @@ local function nameTag(adornee: BasePart, def: BrainrotDef, extra: string?)
 	gui.Name = "Tag"
 	gui.Size = UDim2.fromOffset(180, 62)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, def.height + 1.6, 0)
-	gui.MaxDistance = 90
+	gui.MaxDistance = 40
 	gui.LightInfluence = 0
 	gui.Adornee = adornee
 	local function label(text: string, y: number, h: number, color: Color3, font: Enum.Font)
@@ -422,6 +422,27 @@ local function surfaceSign(part: BasePart, face: Enum.NormalId, text: string, co
 	sg.Parent = part
 end
 
+
+--------------------------------------------------------------------------------------------------------
+-- The Sacred Relic & Temple of GigaChad (Endgame Goal)
+--------------------------------------------------------------------------------------------------------
+
+local TEMPLE_POS = Vector3.new(455, 0.3, 0)
+local relicModel: Model? = nil
+local relicPart: BasePart? = nil
+local relicPrompt: ProximityPrompt? = nil
+local relicFx: ParticleEmitter? = nil
+
+local function resetRelic()
+	task.delay(10, function()
+		if relicPart and relicPrompt and relicFx then
+			relicPart.Transparency = 0
+			relicPrompt.Enabled = true
+			relicFx.Enabled = true
+		end
+	end)
+end
+
 local function buildWorld()
 	-- Safe Zone floor
 	local safe = makePart(map, { name = "SafeZoneFloor", size = Vector3.new(SAFE_EDGE - SAFE_START, 0.6, HALF_WIDTH * 2), cf = CFrame.new((SAFE_EDGE + SAFE_START) / 2, 0.3, 0), color = Color3.fromRGB(200, 205, 215), material = Enum.Material.Concrete, collide = true })
@@ -510,7 +531,219 @@ local function buildWorld()
 	coinFx.Size = NumberSequence.new(0.8, 0)
 	coinFx.LightEmission = 1
 	coinFx.EmissionDirection = Enum.NormalId.Right -- the pad is a cylinder turned upright, so +X is up
+	
 	coinFx.Parent = pad
+
+	----------------------------------------------------------------------------------------------------
+	-- 1. Obstacles & Field Mechanics
+	----------------------------------------------------------------------------------------------------
+
+	-- JUMP PADS (Cyan Neon Cylinders that bounce player high across hazards)
+	local jumpPadCoords = { Vector3.new(45, 0.3, 0), Vector3.new(165, 0.3, -16), Vector3.new(245, 0.3, 16) }
+	for _, jpos in jumpPadCoords do
+		local jpad = makePart(map, { shape = Enum.PartType.Cylinder, size = Vector3.new(0.6, 7, 7), cf = CFrame.new(jpos) * UP, color = Color3.fromRGB(0, 240, 255), material = Enum.Material.Neon, collide = true, touch = true })
+		jpad.Name = "JumpPad"
+		local jSign = makePart(map, { size = Vector3.new(1, 1, 1), cf = CFrame.new(jpos + Vector3.new(0, 3.5, 0)), transparency = 1, shadow = false })
+		local jbg = Instance.new("BillboardGui")
+		jbg.Size = UDim2.fromOffset(130, 36)
+		jbg.LightInfluence = 0
+		jbg.MaxDistance = 45
+		local jl = Instance.new("TextLabel")
+		jl.Size = UDim2.fromScale(1, 1)
+		jl.BackgroundTransparency = 1
+		jl.Text = "🦘 JUMP PAD"
+		jl.TextColor3 = Color3.fromRGB(0, 240, 255)
+		jl.TextScaled = true
+		jl.Font = Enum.Font.FredokaOne
+		jl.Parent = jbg
+		jbg.Parent = jSign
+		jpad.Touched:Connect(function(hit)
+			local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+			local hrp = hit.Parent and hit.Parent:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if hum and hrp and hum.Health > 0 then
+				hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X + 30, 85, hrp.AssemblyLinearVelocity.Z)
+			end
+		end)
+	end
+
+	-- SPEED BOOST STRIPS (Yellow Neon Strips that grant +20 WalkSpeed for 3.5s)
+	local boostCoords = { Vector3.new(28, 0.25, 0), Vector3.new(105, 0.25, 0), Vector3.new(185, 0.25, 0), Vector3.new(335, 0.25, 0) }
+	for _, bpos in boostCoords do
+		local bstrip = makePart(map, { size = Vector3.new(8, 0.2, 14), cf = CFrame.new(bpos), color = Color3.fromRGB(255, 230, 20), material = Enum.Material.Neon, collide = true, touch = true })
+		bstrip.Name = "SpeedBoost"
+		local bSign = makePart(map, { size = Vector3.new(1, 1, 1), cf = CFrame.new(bpos + Vector3.new(0, 3, 0)), transparency = 1, shadow = false })
+		local bbg = Instance.new("BillboardGui")
+		bbg.Size = UDim2.fromOffset(130, 32)
+		bbg.LightInfluence = 0
+		bbg.MaxDistance = 45
+		local bl = Instance.new("TextLabel")
+		bl.Size = UDim2.fromScale(1, 1)
+		bl.BackgroundTransparency = 1
+		bl.Text = "⚡ SPEED BOOST"
+		bl.TextColor3 = Color3.fromRGB(255, 230, 30)
+		bl.TextScaled = true
+		bl.Font = Enum.Font.FredokaOne
+		bl.Parent = bbg
+		bbg.Parent = bSign
+		bstrip.Touched:Connect(function(hit)
+			local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+			if hum and hum.Health > 0 and not hum:GetAttribute("SpeedBoosted") then
+				hum:SetAttribute("SpeedBoosted", true)
+				local orig = hum.WalkSpeed
+				hum.WalkSpeed = orig + 20
+				task.delay(3.5, function()
+					if hum and hum.Parent then
+						hum.WalkSpeed = orig
+						hum:SetAttribute("SpeedBoosted", nil)
+					end
+				end)
+			end
+		end)
+	end
+
+	-- GRIMACE ACID LAKE (Rare Zone: X=125..155, purple damaging sludge with stepping stone path)
+	local acid = makePart(map, { name = "GrimaceAcid", size = Vector3.new(26, 0.2, 54), cf = CFrame.new(140, 0.12, 0), color = Color3.fromRGB(150, 30, 220), material = Enum.Material.Neon, collide = true, touch = true })
+	local acidSign = makePart(map, { size = Vector3.new(1, 1, 1), cf = CFrame.new(140, 5, 0), transparency = 1, shadow = false })
+	local abg = Instance.new("BillboardGui")
+	abg.Size = UDim2.fromOffset(260, 40)
+	abg.LightInfluence = 0
+	abg.MaxDistance = 60
+	local al = Instance.new("TextLabel")
+	al.Size = UDim2.fromScale(1, 1)
+	al.BackgroundTransparency = 1
+	al.Text = "☣ GRIMACE ACID LAKE — JUMP ON STONES! ☣"
+	al.TextColor3 = Color3.fromRGB(220, 100, 255)
+	al.TextScaled = true
+	al.Font = Enum.Font.FredokaOne
+	al.Parent = abg
+	abg.Parent = acidSign
+
+	acid.Touched:Connect(function(hit)
+		local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+		if hum and hum.Health > 0 and not hum:GetAttribute("AcidTick") then
+			hum:SetAttribute("AcidTick", true)
+			hum:TakeDamage(18)
+			task.delay(0.6, function()
+				if hum and hum.Parent then
+					hum:SetAttribute("AcidTick", nil)
+				end
+			end)
+		end
+	end)
+
+	-- Stepping stones across the acid lake
+	local stoneCoords = { Vector3.new(129, 0.5, -8), Vector3.new(135, 0.5, 7), Vector3.new(141, 0.5, -5), Vector3.new(147, 0.5, 9), Vector3.new(153, 0.5, -4) }
+	for _, spos in stoneCoords do
+		makePart(map, { name = "SteppingStone", shape = Enum.PartType.Cylinder, size = Vector3.new(0.8, 5, 5), cf = CFrame.new(spos) * UP, color = Color3.fromRGB(90, 85, 95), material = Enum.Material.Slate, collide = true })
+	end
+
+	-- SPINNING SKIBIDI HAZARD LASERS (Epic Zone: X=215)
+	for _, zOff in { -16, 16 } do
+		local pillar = makePart(map, { size = Vector3.new(2, 6, 2), cf = CFrame.new(215, 3, zOff), color = Color3.fromRGB(40, 40, 50), material = Enum.Material.Metal, collide = true })
+		local laser = makePart(map, { size = Vector3.new(22, 0.7, 0.7), cf = CFrame.new(215, 2.2, zOff), color = Color3.fromRGB(255, 30, 30), material = Enum.Material.Neon, collide = false, touch = true })
+		laser.Name = "HazardLaser"
+		laser.Touched:Connect(function(hit)
+			local hum = hit.Parent and hit.Parent:FindFirstChildOfClass("Humanoid")
+			local hrp = hit.Parent and hit.Parent:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if hum and hrp and hum.Health > 0 and not hum:GetAttribute("LaserHit") then
+				hum:SetAttribute("LaserHit", true)
+				hum:TakeDamage(22)
+				hrp.AssemblyLinearVelocity = Vector3.new(-45, 30, (hrp.Position.Z - zOff) * 4)
+				task.delay(0.8, function()
+					if hum and hum.Parent then hum:SetAttribute("LaserHit", nil) end
+				end)
+			end
+		end)
+		task.spawn(function()
+			local angle = 0
+			while laser.Parent do
+				angle += 0.05
+				laser.CFrame = CFrame.new(215, 2.2, zOff) * CFrame.Angles(0, angle, 0)
+				task.wait(0.03)
+			end
+		end)
+	end
+
+	-- CASEOH GRAVITY BOULDERS (Legendary Zone: X=280..310 parkour crags)
+	for _, bpos in { Vector3.new(280, 4, -12), Vector3.new(290, 5, 14), Vector3.new(300, 4, -8), Vector3.new(310, 5, 10) } do
+		makePart(map, { shape = Enum.PartType.Ball, size = Vector3.new(9, 7, 9), cf = CFrame.new(bpos), color = Color3.fromRGB(105, 95, 90), material = Enum.Material.Rock, collide = true })
+	end
+
+	----------------------------------------------------------------------------------------------------
+	-- 2. TEMPLE OF GIGACHAD & THE SACRED RELIC (Endgame Victory Objective at X=455)
+	----------------------------------------------------------------------------------------------------
+
+	relicModel = Instance.new("Model")
+	relicModel.Name = "TempleOfGigaChad"
+	relicModel.Parent = map
+
+	-- Golden Temple Platform
+	makePart(relicModel, { name = "TempleFloor", size = Vector3.new(26, 1.2, 32), cf = CFrame.new(TEMPLE_POS), color = Color3.fromRGB(240, 205, 70), material = Enum.Material.Marble, collide = true })
+	
+	-- 4 Golden Pillars
+	for _, corner in { Vector3.new(444, 9, -13), Vector3.new(444, 9, 13), Vector3.new(466, 9, -13), Vector3.new(466, 9, 13) } do
+		makePart(relicModel, { size = Vector3.new(2.4, 18, 2.4), cf = CFrame.new(corner), color = Color3.fromRGB(255, 215, 60), material = Enum.Material.Marble, collide = true })
+	end
+	
+	-- Temple Roof & Arch
+	local roof = makePart(relicModel, { size = Vector3.new(26, 3, 32), cf = CFrame.new(455, 19, 0), color = Color3.fromRGB(220, 180, 50), material = Enum.Material.Marble, collide = true })
+	surfaceSign(roof, Enum.NormalId.Left, "🏛 TEMPLE OF GIGACHAD 🏛", Color3.fromRGB(255, 240, 100))
+
+	-- Altar Pedestal
+	local pedestal = makePart(relicModel, { name = "Pedestal", size = Vector3.new(4, 3, 4), cf = CFrame.new(455, 2.7, 0), color = Color3.fromRGB(50, 45, 60), material = Enum.Material.Granite, collide = true })
+	
+	-- Floating Sacred Relic (Golden Crown Trophy)
+	relicPart = makePart(relicModel, { name = "SacredRelic", shape = Enum.PartType.Ball, size = Vector3.new(2.4, 2.4, 2.4), cf = CFrame.new(455, 5.8, 0), color = Color3.fromRGB(255, 220, 40), material = Enum.Material.Neon, shadow = false, collide = false })
+	relicFx = Instance.new("ParticleEmitter")
+	relicFx.Name = "RelicSparkles"
+	relicFx.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	relicFx.Color = ColorSequence.new(Color3.fromRGB(255, 230, 80))
+	relicFx.Rate = 20
+	relicFx.Speed = NumberRange.new(2, 5)
+	relicFx.Size = NumberSequence.new(1.2, 0)
+	relicFx.Parent = relicPart
+
+	-- Billboard Header over Relic
+	local rSign = makePart(relicModel, { size = Vector3.new(1, 1, 1), cf = CFrame.new(455, 8.5, 0), transparency = 1, shadow = false })
+	local rbg = Instance.new("BillboardGui")
+	rbg.Size = UDim2.fromOffset(260, 60)
+	rbg.LightInfluence = 0
+	rbg.MaxDistance = 90
+	local rl = Instance.new("TextLabel")
+	rl.Size = UDim2.fromScale(1, 1)
+	rl.BackgroundTransparency = 1
+	rl.Text = "👑 THE SACRED RELIC 👑\nGrab & Escape to Win!"
+	rl.TextColor3 = Color3.fromRGB(255, 225, 60)
+	rl.TextScaled = true
+	rl.Font = Enum.Font.FredokaOne
+	rl.Parent = rbg
+	rbg.Parent = rSign
+
+	relicPrompt = Instance.new("ProximityPrompt")
+	relicPrompt.ObjectText = "The Sacred Brainrot Relic"
+	relicPrompt.ActionText = "Claim Relic & Escape!"
+	relicPrompt.HoldDuration = 0.4
+	relicPrompt.MaxActivationDistance = 14
+	relicPrompt.RequiresLineOfSight = false
+	relicPrompt.Parent = relicPart
+
+	relicPrompt.Triggered:Connect(function(triggerPlayer)
+		local d = data[triggerPlayer]
+		if d and not d.hasRelic and not d.knockedOut then
+			d.hasRelic = true
+			relicPart.Transparency = 1
+			relicPrompt.Enabled = false
+			relicFx.Enabled = false
+			notify(triggerPlayer, "👑 SACRED RELIC CLAIMED! ESCAPE BACK TO THE SAFE ZONE TO WIN!", Color3.fromRGB(255, 215, 0))
+			for p, _ in data do
+				if p ~= triggerPlayer then
+					notify(p, string.format("🚨 %s grabbed the Sacred Relic! Tsunami is approaching!", triggerPlayer.DisplayName), Color3.fromRGB(255, 120, 100))
+				end
+			end
+			pushState(triggerPlayer)
+		end
+	end)
+
 end
 
 local function buildStall(pos: Vector3, title: string, color: Color3, actionText: string): BasePart
@@ -572,6 +805,7 @@ local function remote(name: string): RemoteEvent
 	r.Parent = remotes
 	return r
 end
+local VictoryEvent = remote("Victory")
 local StateEvent = remote("State") -- server -> client: the player's whole economy snapshot
 local NotifyEvent = remote("Notify") -- server -> client: (text, color?)
 local PickupEvent = remote("Pickup") -- server -> client: (id, position)
@@ -595,6 +829,8 @@ type PlayerData = {
 	plot: number?,
 	lastFullNotice: number,
 	knockedOut: boolean,
+	wins: number,
+	hasRelic: boolean,
 }
 
 local data: { [Player]: PlayerData } = {}
@@ -675,6 +911,8 @@ local function snapshot(d: PlayerData)
 		multiplier = multiplier(d),
 		rebirthCost = rebirthCost(d),
 		nextMultiplier = 1 + 0.5 * (d.rebirths + 1),
+		wins = d.wins or 0,
+		hasRelic = d.hasRelic == true,
 	}
 end
 
@@ -687,7 +925,9 @@ local function pushState(player: Player)
 	local ls = player:FindFirstChild("leaderstats")
 	if ls then
 		(ls:FindFirstChild("Cash") :: NumberValue).Value = math.floor(d.cash);
-		(ls:FindFirstChild("Rebirths") :: IntValue).Value = d.rebirths
+		(ls:FindFirstChild("Rebirths") :: IntValue).Value = d.rebirths;
+		local wVal = ls:FindFirstChild("Wins") :: IntValue?
+		if wVal then wVal.Value = d.wins or 0 end
 	end
 end
 
@@ -1029,10 +1269,26 @@ task.spawn(function()
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if hrp and hum and hum.Health > 0 then
 				local pos = hrp.Position
-				-- the depository
+				-- the depository & victory escape check
 				local toPad = Vector3.new(pos.X - DEPOSIT_POS.X, 0, pos.Z - DEPOSIT_POS.Z).Magnitude
-				if toPad <= DEPOSIT_RADIUS and #d.bag > 0 then
-					deposit(player, d)
+				if (toPad <= DEPOSIT_RADIUS and #d.bag > 0) or (pos.X < SAFE_EDGE and d.hasRelic) then
+					if d.hasRelic then
+						d.hasRelic = false
+						d.wins = (d.wins or 0) + 1
+						local winReward = 50000 * multiplier(d)
+						d.cash += winReward
+						VictoryEvent:FireClient(player, d.wins, winReward)
+						notify(player, string.format("🏆 ESCAPE VICTORY! Relic Saved! +1 Win & +$%s!", formatNumber(winReward)), Color3.fromRGB(255, 215, 0))
+						for p, _ in data do
+							if p ~= player then
+								notify(p, string.format("🎉 %s won an Escape Victory! (+1 Win)", player.DisplayName), Color3.fromRGB(255, 220, 80))
+							end
+						end
+						resetRelic()
+					end
+					if #d.bag > 0 then
+						deposit(player, d)
+					end
 				end
 				-- catching
 				if pos.X > SAFE_EDGE then
@@ -1140,6 +1396,8 @@ local function newData(): PlayerData
 		plot = nil,
 		lastFullNotice = 0,
 		knockedOut = false,
+	wins = 0,
+	hasRelic = false,
 	}
 end
 
@@ -1152,6 +1410,7 @@ local function load(player: Player): PlayerData
 		if ok and type(saved) == "table" then
 			d.cash = tonumber(saved.cash) or 0
 			d.rebirths = tonumber(saved.rebirths) or 0
+			d.wins = tonumber(saved.wins) or 0
 			if type(saved.owned) == "table" then
 				for id, n in saved.owned do
 					if BY_ID[id] and tonumber(n) then
@@ -1175,7 +1434,7 @@ local function save(player: Player)
 		return
 	end
 	pcall(function()
-		(store :: DataStore):SetAsync("p_" .. player.UserId, { cash = d.cash, owned = d.owned, levels = d.levels, rebirths = d.rebirths })
+		(store :: DataStore):SetAsync("p_" .. player.UserId, { cash = d.cash, owned = d.owned, levels = d.levels, rebirths = d.rebirths, wins = d.wins or 0 })
 	end)
 end
 
@@ -1204,6 +1463,10 @@ local function onPlayerAdded(player: Player)
 	local rb = Instance.new("IntValue")
 	rb.Name = "Rebirths"
 	rb.Parent = ls
+	local w = Instance.new("IntValue")
+	w.Name = "Wins"
+	w.Value = d.wins or 0
+	w.Parent = ls
 	ls.Parent = player
 
 	local d = load(player)

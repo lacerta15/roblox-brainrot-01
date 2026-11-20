@@ -17,6 +17,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+local VictoryEvent = remotes:WaitForChild("Victory") :: RemoteEvent
 local StateEvent = remotes:WaitForChild("State") :: RemoteEvent
 local NotifyEvent = remotes:WaitForChild("Notify") :: RemoteEvent
 local PickupEvent = remotes:WaitForChild("Pickup") :: RemoteEvent
@@ -155,6 +156,7 @@ local bagLabel = label({ Name = "Bag", Text = "🎒 Bag 0/3", Position = UDim2.f
 local bagBar = new("Frame", { Position = UDim2.fromOffset(14, 140), Size = UDim2.fromOffset(242, 12), BackgroundColor3 = Color3.fromRGB(50, 50, 70), ZIndex = 6, Parent = stats }, { corner(6) })
 local bagFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(90, 200, 255), ZIndex = 7, Parent = bagBar }, { corner(6) })
 local rebirthLabel = label({ Name = "Rebirth", Text = "♻ Rebirth 0  •  x1.0 income", Position = UDim2.fromOffset(14, 160), Size = UDim2.fromOffset(242, 22), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 140, 230), ZIndex = 6, Parent = stats })
+local winsLabel = label({ Name = "Wins", Text = "🏆 Wins 0  •  Escape Hero", Position = UDim2.fromOffset(14, 185), Size = UDim2.fromOffset(242, 22), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(255, 215, 0), ZIndex = 6, Parent = stats })
 
 -- Tsunami timer and zone indicator (top centre)
 local waveBar = new("Frame", {
@@ -369,6 +371,7 @@ local function renderState()
 	tween(bagFill, 0.2, { Size = UDim2.fromScale(math.clamp(bagCount / math.max(state.capacity, 1), 0, 1), 1) })
 	bagFill.BackgroundColor3 = bagCount >= state.capacity and Color3.fromRGB(255, 150, 50) or Color3.fromRGB(90, 200, 255)
 	rebirthLabel.Text = string.format("♻ Rebirth %d  •  x%.1f income", state.rebirths, state.multiplier)
+	winsLabel.Text = string.format("🏆 Wins %d  •  Escape Hero", state.wins or 0)
 	shopCash.Text = "$" .. formatNumber(state.cash)
 
 	for key, card in cards do
@@ -401,6 +404,21 @@ end)
 
 NotifyEvent.OnClientEvent:Connect(function(text: string, color: Color3?)
 	toast(text, color)
+end)
+
+VictoryEvent.OnClientEvent:Connect(function(wins: number, bonus: number)
+	toast(string.format("🏆 ESCAPE VICTORY! +1 WIN & +$%s!", formatNumber(bonus)), Color3.fromRGB(255, 215, 0))
+	alert.Visible = true
+	alertSub.Visible = true
+	alert.Text = "🏆 ESCAPE VICTORY! 🏆"
+	alert.TextColor3 = Color3.fromRGB(255, 220, 60)
+	alertSub.Text = string.format("You brought the Sacred Relic back alive! Total Wins: %d", wins)
+	task.delay(4, function()
+		if workspace:GetAttribute("TsunamiPhase") == "calm" then
+			alert.Visible = false
+			alertSub.Visible = false
+		end
+	end)
 end)
 
 --------------------------------------------------------------------------------------------------------
@@ -640,7 +658,7 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 	blur.Size = (phase == "warning" and not safe) and 2 or 0
 
-	-- the field's brainrots bob and turn
+	-- the field's brainrots bob and turn smoothly on their fixed spawn positions
 	local t = os.clock()
 	for _, m in fieldFolder:GetChildren() do
 		if m:IsA("Model") then
@@ -649,8 +667,10 @@ RunService.RenderStepped:Connect(function(dt)
 				base = m:GetPivot()
 				basePivots[m] = base
 			end
-			local phaseOffset = (base.Position.X + base.Position.Z) * 0.1
-			m:PivotTo(base * CFrame.new(0, 0.6 + math.sin(t * 2.2 + phaseOffset) * 0.5, 0) * CFrame.Angles(0, t * 0.8 + phaseOffset, 0))
+			local phaseOffset = (base.Position.X * 0.05 + base.Position.Z * 0.05)
+			local bob = math.sin(t * 3 + phaseOffset) * 0.35
+			local cf = CFrame.new(base.Position.X, base.Position.Y + 0.3 + bob, base.Position.Z) * CFrame.Angles(0, t * 1.5 + phaseOffset, 0)
+			m:PivotTo(cf)
 		end
 	end
 end)
