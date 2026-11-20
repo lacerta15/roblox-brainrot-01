@@ -1,5 +1,4 @@
 {
-  "tour": 1,
   "steps": [
     {
       "screenshot": "1-start.jpg",
@@ -9,12 +8,22 @@
       "screenshot": "2-play.png",
       "keys": ["W"],
       "wait_ms": 2500,
-      "call": { "module": "ServerScriptService.Server.Tour", "fn": "bank", "arg": 6, "on": "Server" }
+      "call": {
+        "module": "ServerScriptService.Server.Tour",
+        "fn": "bank",
+        "arg": 6,
+        "on": "Server"
+      }
     },
     {
       "screenshot": "3-end.png",
       "wait_ms": 3000,
-      "call": { "module": "ServerScriptService.Server.Tour", "fn": "tsunami", "arg": "now", "on": "Server" }
+      "call": {
+        "module": "ServerScriptService.Server.Tour",
+        "fn": "tsunami",
+        "arg": "now",
+        "on": "Server"
+      }
     }
   ]
 }

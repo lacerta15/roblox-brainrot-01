@@ -1,34 +1,33 @@
--- Tour hooks: ServerScriptService.Server.Tour | Place ID 73488091337421 | Play Code makefun-kale-oasis-guppy | Timestamp: 2026-11-20 15:23:00 +07:00
--- Reviewers (and TOUR.json) can call these functions on the Server to bring the game to a given screen.
--- The main server script fills in Tour.hooks when it starts; require() caches this table, so the
--- tour runner and the game share the same hooks.
+-- Tour.luau
+-- ModuleScript invoked by the make.fun tour runner to drive scripted demo beats
+-- (tsunami disaster, cash grant, bag bank) during automated screenshot capture.
 
 local Tour = {}
 
-Tour.hooks = {} :: { [string]: (any) -> () }
+Tour.hooks = {}
 
-local function run(name: string, arg: any)
-	local hook = Tour.hooks[name]
-	if hook then
-		hook(arg)
-	else
-		warn("[Tour] hook not ready: " .. name)
+function Tour.tsunami(arg)
+	local handler = Tour.hooks["tsunami"]
+	if handler then
+		return handler(arg)
 	end
+	warn("[Tour] no 'tsunami' hook registered; arg =", arg)
 end
 
--- Start the tsunami warning right now (arg ignored).
-function Tour.tsunami(arg: any)
-	run("tsunami", arg)
+function Tour.cash(arg)
+	local handler = Tour.hooks["cash"]
+	if handler then
+		return handler(arg)
+	end
+	warn("[Tour] no 'cash' hook registered; arg =", arg)
 end
 
--- Give every player `arg` cash (an integer).
-function Tour.cash(arg: any)
-	run("cash", tonumber(arg) or 1000)
-end
-
--- Bank `arg` random brainrots onto every player's base (an integer).
-function Tour.bank(arg: any)
-	run("bank", tonumber(arg) or 5)
+function Tour.bank(arg)
+	local handler = Tour.hooks["bank"]
+	if handler then
+		return handler(arg)
+	end
+	warn("[Tour] no 'bank' hook registered; arg =", arg)
 end
 
 return Tour
