@@ -1,4 +1,4 @@
-// Revision: verified 1280x720 primary thumbnail integration and tour data (round 3)
+// Revision: verified 1280x720 primary thumbnail integration and tour data (round 3) | Place ID 73488091337421 | Play Code makefun-kale-oasis-guppy | Timestamp: 2026-11-20 15:23:00 +07:00
 // Brainrot Escape Disaster: the roblox-brainrot-01 entry (Node 22, standard library only).
 //
 // The game is this directory's Rojo project (default.project.json maps src/server to

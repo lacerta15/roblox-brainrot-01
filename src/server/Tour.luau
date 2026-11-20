@@ -1,4 +1,4 @@
--- Tour hooks: ServerScriptService.Server.Tour
+-- Tour hooks: ServerScriptService.Server.Tour | Place ID 73488091337421 | Play Code makefun-kale-oasis-guppy | Timestamp: 2026-11-20 15:23:00 +07:00
 -- Reviewers (and TOUR.json) can call these functions on the Server to bring the game to a given screen.
 -- The main server script fills in Tour.hooks when it starts; require() caches this table, so the
 -- tour runner and the game share the same hooks.

@@ -1,4 +1,4 @@
--- Brainrot Escape Disaster — client
+-- Brainrot Escape Disaster — client | Play Code makefun-kale-oasis-guppy | Timestamp: 2026-11-20 15:23:00 +07:00
 --
 -- A ScreenGui HUD over the 3D world: the cash counter (rolling up smoothly), cash per second, the bag and
 -- its capacity, the rebirth multiplier, the tsunami timer with a flashing warning, the safe/danger zone

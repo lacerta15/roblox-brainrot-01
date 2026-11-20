@@ -1,4 +1,4 @@
--- Brainrot Escape Disaster — server
+-- Brainrot Escape Disaster — server | Place ID 73488091337421 | Play Code makefun-kale-oasis-guppy | Timestamp: 2026-11-20 15:23:00 +07:00
 --
 -- The map runs along +X. The Safe Zone (X < 0) holds the spawn, every player's base, the depository pad,
 -- the upgrade shop and the rebirth altar. The field (0 < X < 480) is split into rarity zones: the farther
